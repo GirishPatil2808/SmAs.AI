@@ -1,0 +1,120 @@
+.widget {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 2147483647; /* very important for extensions */
+  cursor: grab;
+}
+
+.widget_button {
+  padding: 10px 16px;
+  border-radius: 20px;
+  border: none;
+  background: #626263;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+}
+.widget,
+.widget * {
+  box-sizing: border-box;
+  font-family: system-ui, sans-serif;
+}
+
+
+/* For Feature panel */
+.feature_panel {
+  position: absolute;
+  bottom: 60px;
+  right: 0;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+
+  background: rgba(30, 30, 30, 0.85);
+  backdrop-filter: blur(8px);
+  padding: 10px;
+  border-radius: 12px;
+}
+
+.feature_btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.feature_btn:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+
+/* Transparent chatbox */
+
+.chatbox {
+  position: fixed;
+  top: 0;
+  right: -360px; /* hidden initially */
+  width: 360px;
+  height: 100vh;
+
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(10px);
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.6);
+
+  display: flex;
+  flex-direction: column;
+  z-index: 2147483647;
+
+  transition: right 0.3s ease;
+}
+
+/* visible state */
+.chatbox.open {
+  right: 0;
+}
+
+/* header */
+.chat_header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 12px;
+  color: white;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+/* messages */
+.chat_messages {
+  flex: 1;
+  padding: 12px;
+  overflow-y: auto;
+  color: white;
+  font-size: 14px;
+}
+
+/* input area */
+.chat_input {
+  display: flex;
+  padding: 10px;
+  gap: 8px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.chat_input input {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+}
+
+.chat_input button {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}

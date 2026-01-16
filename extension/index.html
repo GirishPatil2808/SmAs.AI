@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmAs.AI</title>
+    <link rel="stylesheet" href="widget.css">
+</head>
+
+<body>
+    <div class="widget" id="widget" data-smas-widget="true"> 
+        <div>
+            <button class="widget_button" id="widget_button">Ask AI</button>
+        </div>
+        <div class="feature_panel" id="feature_panel">
+            <butt class="feature_btn">Explain</butt>
+            <butt class="feature_btn">Code</butt>
+            <butt class="feature_btn">Summarize</butt>
+            <butt class="feature_btn">Research</butt>
+        </div>
+    </div>
+    
+    <!-- Chatbot box -->
+     <div class="chatbox" id="chatbox">
+        <div class="chat_header">
+            <span id="chat_title">AI Assistant</span>
+            <button id="chat_close">X</button>
+        </div>
+
+        <div class="chat_messages" id="chat_messages">
+            <!-- messages will come here later -->
+        </div>
+
+        <div class="chat_input">
+            <input type="text" placeholder="Ask Something"/>
+            <button>Send</button>
+        </div>
+     </div>
+
+    <script src="widget.js"></script>
+</body>
+</html>
