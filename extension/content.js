@@ -63,6 +63,39 @@ function initSmAsWidget() {
     offsetX = e.clientX - rect.left;
     offsetY = e.clientY - rect.top;
   });
+  // -----------------
+// CHATBOX DRAG LOGIC
+// -----------------
+let isChatDragging = false;
+let chatOffsetX = 0;
+let chatOffsetY = 0;
+
+const chatHeader = document.querySelector(".chat_header");
+
+chatHeader.addEventListener("mousedown", (e) => {
+  // ❌ if close button clicked → don't drag
+  if (e.target.id === "chat_close") return;
+
+  isChatDragging = true;
+  const rect = chatbox.getBoundingClientRect();
+  chatOffsetX = e.clientX - rect.left;
+  chatOffsetY = e.clientY - rect.top;
+
+  chatbox.style.right = "auto";
+});
+
+
+document.addEventListener("mousemove", (e) => {
+  if (!isChatDragging) return;
+
+  chatbox.style.left = `${e.clientX - chatOffsetX}px`;
+  chatbox.style.top = `${e.clientY - chatOffsetY}px`;
+});
+
+document.addEventListener("mouseup", () => {
+  isChatDragging = false;
+});
+
 
   document.addEventListener("mousemove", (e) => {
     if (!isDragging) return;
@@ -85,9 +118,27 @@ function initSmAsWidget() {
       featurePanel.style.display === "flex" ? "none" : "flex";
   });
 
-  document.addEventListener("click", () => {
+  // CLICK OUTSIDE TO CLOSE BOTH CHATBOX AND FEATURE PANEL
+document.addEventListener("mousedown", (e) => {
+  const target = e.target;
+
+  // Close chatbox if click is outside both chatbox and widget
+  if (chatbox.classList.contains("open") &&
+      !chatbox.contains(target) &&
+      !widget.contains(target)) {
+    chatbox.classList.remove("open");
+  }
+
+  // Close feature panel if click is outside widget
+  if (featurePanel.style.display === "flex" &&
+      !widget.contains(target)) {
     featurePanel.style.display = "none";
-  });
+  }
+});
+
+// Prevent clicks inside chatbox or feature panel from closing them
+chatbox.addEventListener("mousedown", e => e.stopPropagation());
+featurePanel.addEventListener("mousedown", e => e.stopPropagation());
 
   featurePanel.addEventListener("mousedown", e => e.stopPropagation());
 
@@ -96,7 +147,8 @@ function initSmAsWidget() {
   // -----------------
   document.querySelectorAll(".feature_btn").forEach(btn => {
     btn.addEventListener("click", () => {
-      const feature = btn.innerText;
+      const feature = btn.innerText.replace(/[^a-zA-Z]/g, "").trim();
+
       const selectedText = window.getSelection().toString().trim();
 
       chatTitle.innerText = feature;
@@ -107,12 +159,23 @@ function initSmAsWidget() {
       chatMessages.style.display = "none";
       resultView.innerHTML = "";
 
-      if (feature === "Research") {
-        chatInput.style.display = "flex";
+      if (feature === "🔍Research") {
+        chatbox.style.display = "flex";
+        resultView.style.display = "none";
         chatMessages.style.display = "block";
-        resultView.innerHTML =
-          `<p style="opacity:0.7">${selectedText || "Ask anything freely."}</p>`;
-      } else {
+        chatInput.style.display = "flex";
+      
+        if (!chatMessages.innerHTML.trim()) {
+          chatMessages.innerHTML = `
+            <div class="msg bot">Hi 👋 Ask me anything.</div>
+          `;
+        }
+      
+      }
+      else {
+        chatMessages.style.display = "none";
+        chatInput.style.display = "none";
+        resultView.style.display = "block";
         if (!selectedText) {
           resultView.innerHTML = "<p>Please select text first.</p>";
         } else {
@@ -123,8 +186,16 @@ function initSmAsWidget() {
     });
   });
 
+  closeBtn.addEventListener("mousedown", (e) => {
+    e.stopPropagation();
+  });
   closeBtn.addEventListener("click", () => {
     chatbox.classList.remove("open");
+  
+    // 🔥 reset drag positioning
+    chatbox.style.left = "";
+    chatbox.style.top = "";
+    chatbox.style.right = "-360px";
   });
 
   console.log("SmAs.AI widget initialized");
