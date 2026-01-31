@@ -1,1 +1,22 @@
 config.js
+index.faiss
+index.pkl
+
+#python
+backend/venv/
+venv/
+__pycache__/
+*.pyc
+
+
+# Environment
+.env
+
+# Vector / RAG data (optional but recommended)
+data/
+*.faiss
+*.pkl
+
+# OS
+.DS_Store
+Thumbs.db

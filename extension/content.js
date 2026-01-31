@@ -25,6 +25,7 @@ fetch(chrome.runtime.getURL("index.html"))
     document.body.appendChild(container);
 
     // 🚀 NOW initialize widget logic
+    
     initSmAsWidget();
   })
   .catch(err => console.error("SmAs.AI injection failed:", err));
@@ -34,6 +35,115 @@ fetch(chrome.runtime.getURL("index.html"))
 // ALL WIDGET LOGIC HERE
 // =========================
 function initSmAsWidget() {
+
+    // =========================
+  // AUTO-INGEST STATE
+  // =========================
+  const INGESTED_PAGES_KEY = "smas_ingested_pages";
+
+  let ingestedPages = new Set(
+    JSON.parse(localStorage.getItem(INGESTED_PAGES_KEY) || "[]")
+  );
+
+  function saveIngestedPages() {
+    localStorage.setItem(
+      INGESTED_PAGES_KEY,
+      JSON.stringify([...ingestedPages])
+    );
+  }
+
+    // =========================
+  // PAGE TEXT EXTRACTOR
+  // =========================
+  function extractPageText() {
+  const isWikipedia = location.hostname.includes("wikipedia.org");
+
+  let summaryBlock = "";
+
+  if (isWikipedia) {
+    try {
+      const title =
+        document.querySelector("#firstHeading")?.innerText?.trim() || "";
+
+      const contentRoot = document.querySelector("#mw-content-text");
+      let leadParagraph = "";
+
+      if (contentRoot) {
+        const paragraphs = contentRoot.querySelectorAll("p");
+        for (const p of paragraphs) {
+          const text = p.innerText.trim();
+          if (text.length > 100) {
+            leadParagraph = text;
+            break;
+          }
+        }
+      }
+
+      if (leadParagraph) {
+        summaryBlock = `PAGE SUMMARY:\n${leadParagraph}\n\nPAGE TITLE:\n${title}\n\n`;
+      }
+    } catch (e) {
+      console.warn("Wikipedia summary extraction failed:", e);
+    }
+  }
+
+  // Clone full body for general content
+  const clone = document.body.cloneNode(true);
+  clone
+    .querySelectorAll(
+      "script, style, nav, footer, header, aside, noscript"
+    )
+    .forEach(el => el.remove());
+
+  const fullText = (clone.innerText || "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return summaryBlock + "PAGE CONTENT:\n" + fullText;
+}
+
+
+    // =========================
+  // AUTO-INGEST FUNCTION
+  // =========================
+  async function autoIngestCurrentPage() {
+    const url = location.href;
+
+    if (ingestedPages.has(url)) {
+      console.log("SmAs.AI: Page already ingested");
+      return;
+    }
+
+    const text = extractPageText();
+
+    if (!text || text.length < 800) {
+      console.warn("SmAs.AI: Page too small to ingest");
+      return;
+    }
+
+    try {
+     chrome.runtime.sendMessage({
+  type: "RAG_INGEST",
+  payload: {
+    text,
+    source_url: url,
+    title: document.title || "Untitled Page",
+  }
+});
+
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      console.log("SmAs.AI ingested successfully");
+
+
+      ingestedPages.add(url);
+      saveIngestedPages();
+
+    } catch (err) {
+      console.warn("SmAs.AI auto-ingest failed:", err.message);
+    }
+  }
 
   const widget = document.getElementById("widget");
   const askBtn = document.getElementById("widget_button");
@@ -147,8 +257,7 @@ featurePanel.addEventListener("mousedown", e => e.stopPropagation());
   // -----------------
   document.querySelectorAll(".feature_btn").forEach(btn => {
     btn.addEventListener("click", () => {
-      const feature = btn.innerText.replace(/[^a-zA-Z]/g, "").trim();
-
+      const feature = btn.dataset.feature;
       const selectedText = window.getSelection().toString().trim();
 
       chatTitle.innerText = feature;
@@ -159,19 +268,25 @@ featurePanel.addEventListener("mousedown", e => e.stopPropagation());
       chatMessages.style.display = "none";
       resultView.innerHTML = "";
 
-      if (feature === "🔍Research") {
+      if (feature === "Research") {
         chatbox.style.display = "flex";
         resultView.style.display = "none";
         chatMessages.style.display = "block";
         chatInput.style.display = "flex";
-      
+
         if (!chatMessages.innerHTML.trim()) {
           chatMessages.innerHTML = `
-            <div class="msg bot">Hi 👋 Ask me anything.</div>
+            <div class="msg bot">
+              📄 <strong>From this page</strong><br/>
+              Hi 👋 Ask me anything about this page.
+            </div>
           `;
         }
-      
+
+        // 🔥 AUTO-INGEST CURRENT PAGE
+        autoIngestCurrentPage();
       }
+
       else {
         chatMessages.style.display = "none";
         chatInput.style.display = "none";
@@ -197,6 +312,72 @@ featurePanel.addEventListener("mousedown", e => e.stopPropagation());
     chatbox.style.top = "";
     chatbox.style.right = "-360px";
   });
+
+
+  // -----------------
+// RESEARCH CHAT LOGIC
+// -----------------
+
+const chatInputField = chatInput.querySelector("input");
+const sendBtn = chatInput.querySelector("button");
+
+// helper: add message to UI
+function addMessage(text, sender = "user") {
+  const msg = document.createElement("div");
+  msg.className = `msg ${sender}`;
+  msg.textContent = text;
+  chatMessages.appendChild(msg);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Send message
+sendBtn.addEventListener("click", async () => {
+  const question = chatInputField.value.trim();
+  if (!question) return;
+
+  // show user message
+  addMessage(question, "user");
+  chatInputField.value = "";
+
+  // show thinking placeholder
+  const thinkingMsg = document.createElement("div");
+  thinkingMsg.className = "msg bot";
+  thinkingMsg.textContent = "Thinking...";
+  chatMessages.appendChild(thinkingMsg);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  try {
+chrome.runtime.sendMessage(
+  {
+    type: "RAG_QUERY",
+    payload: {
+      question: question,
+      top_k: 5,
+    }
+  },
+  (response) => {
+    if (!response || response.error) {
+      thinkingMsg.textContent = "Temporary issue. Please retry.";
+      return;
+    }
+    thinkingMsg.textContent = response.answer;
+  }
+);
+
+
+} catch (err) {
+  console.warn("RAG query issue:", err.message);
+  thinkingMsg.textContent = "Temporary issue. Please retry.";
+}
+
+});
+
+// Send on Enter key
+chatInputField.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    sendBtn.click();
+  }
+});
 
   console.log("SmAs.AI widget initialized");
 }
