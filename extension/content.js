@@ -35,6 +35,8 @@ fetch(chrome.runtime.getURL("index.html"))
 // ALL WIDGET LOGIC HERE
 // =========================
 function initSmAsWidget() {
+  let isManuallyOpening = false;
+
 
     // =========================
   // AUTO-INGEST STATE
@@ -233,11 +235,12 @@ document.addEventListener("mousedown", (e) => {
   const target = e.target;
 
   // Close chatbox if click is outside both chatbox and widget
-  if (chatbox.classList.contains("open") &&
-      !chatbox.contains(target) &&
-      !widget.contains(target)) {
-    chatbox.classList.remove("open");
-  }
+  if (!isManuallyOpening &&
+    chatbox.classList.contains("open") &&
+    !chatbox.contains(target) &&
+    !widget.contains(target)) {
+  chatbox.classList.remove("open");
+}
 
   // Close feature panel if click is outside widget
   if (featurePanel.style.display === "flex" &&
@@ -261,27 +264,46 @@ featurePanel.addEventListener("mousedown", e => e.stopPropagation());
       const selectedText = window.getSelection().toString().trim();
 
       chatTitle.innerText = feature;
+      // force reset before opening
+      isManuallyOpening = true;
+
       chatbox.classList.add("open");
+      
+      setTimeout(() => {
+        isManuallyOpening = false;
+      }, 100);
+      
+
       featurePanel.style.display = "none";
 
       chatInput.style.display = "none";
       chatMessages.style.display = "none";
       resultView.innerHTML = "";
 
-      if (feature === "Research") {
+      if (feature === "Research" || feature === "Code") {
         chatbox.style.display = "flex";
         resultView.style.display = "none";
         chatMessages.style.display = "block";
         chatInput.style.display = "flex";
 
         if (!chatMessages.innerHTML.trim()) {
-          chatMessages.innerHTML = `
-            <div class="msg bot">
-              📄 <strong>From this page</strong><br/>
-              Hi 👋 Ask me anything about this page.
-            </div>
-          `;
-        }
+
+  if (feature === "Code") {
+    chatMessages.innerHTML = `
+      <div class="msg bot">
+        💻 Paste your code or ask any coding question.
+      </div>
+    `;
+  } else {
+    chatMessages.innerHTML = `
+      <div class="msg bot">
+        📄 <strong>From this page</strong><br/>
+        Hi 👋 Ask me anything about this page.
+      </div>
+    `;
+  }
+
+}
 
         // 🔥 AUTO-INGEST CURRENT PAGE
         autoIngestCurrentPage();
@@ -310,7 +332,6 @@ featurePanel.addEventListener("mousedown", e => e.stopPropagation());
     // 🔥 reset drag positioning
     chatbox.style.left = "";
     chatbox.style.top = "";
-    chatbox.style.right = "-360px";
   });
 
 
@@ -381,3 +402,18 @@ chatInputField.addEventListener("keydown", (e) => {
 
   console.log("SmAs.AI widget initialized");
 }
+chrome.storage.local.get(["queryCount", "recentQueries"], (data) => {
+
+  let count = data.queryCount || 0;
+  let queries = data.recentQueries || [];
+
+  const newQuery = "User asked something"; // replace with actual query text
+
+  queries.push(newQuery);
+
+  chrome.storage.local.set({
+    queryCount: count + 1,
+    recentQueries: queries
+  });
+
+});

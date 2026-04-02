@@ -25,3 +25,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // REQUIRED
   }
 });
+chrome.action.onClicked.addListener(() => {
+  chrome.tabs.create({
+    url: chrome.runtime.getURL("dashboard.html")
+  });
+});
+
